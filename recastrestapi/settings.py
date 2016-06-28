@@ -8,32 +8,39 @@ from recastrestapi.apiconfig import config as apiconf
 
 DEBUG = True
 
-MY_HOST = 'http://recast-rest-api.herokuapp.com'
-
 SQLALCHEMY_DATABASE_URI =  apiconf['DBPATH']
+
+# file upload stuff
 AWS_ACCESS_KEY_ID = apiconf['AWS_ACCESS_KEY_ID']
 AWS_SECRET_ACCESS_KEY = apiconf['AWS_SECRET_ACCESS_KEY']
 AWS_S3_BUCKET_NAME = apiconf['AWS_S3_BUCKET_NAME']
 ZENODO_ACCESS_TOKEN = apiconf['ZENODO_ACCESS_TOKEN']
-RESOURCE_METHODS = ['GET', 'POST', 'DELETE']
+
+RESOURCE_METHODS = ['GET', 'POST']
+
+# allow GET methods to be public
 PUBLIC_METHODS = ['GET']
 PUBLIC_ITEM_METHODS = ['GET']
+
 HATEOAS = True
 IF_MATCH = False
+EMBEDDING = True
+EMBEDDABLE = True
 
+# removes pagination and meta field
+PAGINATION = False
 
 ID_FIELD = 'id'
 ITEM_LOOKUP_FIELD = ID_FIELD
 config.ID_FIELD = ID_FIELD
 config.ITEM_LOOKUP_FIELD = ID_FIELD
-XML = False
+
+XML = True
 JSON = True
 
 
 from recastrestapi.apiconfig import config as apiconf
 
-XML = True
-JSON = True
 
 registerSchema('users')(recastdb.models.User)
 registerSchema('analysis')(recastdb.models.Analysis)
@@ -81,12 +88,14 @@ DOMAIN['users'].update({
         'item_methods': ['GET', 'PUT', 'PATCH']
         })
 
+
 DOMAIN['analysis'].update({
-        'item_lookup_field': 'id',                
-        'cache_control': 'max-age=10,must-revalidate',
-        'cache_expires': 10,
-        'resource_methods': ['GET', 'POST', 'DELETE']
-        })
+    'item_lookup_field': 'id',                
+    'cache_control': 'max-age=10,must-revalidate',
+    'cache_expires': 10,
+    'resource_methods': ['GET', 'POST', 'DELETE'],
+})
+
 
 DOMAIN['run_conditions'].update({
         'item_lookup_field': 'id',
@@ -100,7 +109,8 @@ DOMAIN['run_conditions'].update({
         'item_methods': ['GET', 'PUT', 'PATCH'],
         'resource_methods': ['GET', 'POST', 'DELETE']
         })
-            
+
+# To by pass validation so we can upload to our file server
 DOMAIN['request_archives'].update({
         'allow_unknown': True,
         })
@@ -119,10 +129,11 @@ DOMAIN['scan_requests'].update({
         'cache_expires': 10,
         'resource_methods': ['GET', 'POST', 'DELETE'],
         'item_methods': ['GET', 'PUT', 'PATCH'],
-        'url': 'requests',
-        })
-            
+        'url': 'requests'
+})
 
+
+    
 DOMAIN['point_requests'].update({
         'item_lookup_field': 'id',
         'additional_lookup': {

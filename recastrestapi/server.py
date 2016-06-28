@@ -12,7 +12,7 @@ from settings import DOMAIN, SQLALCHEMY_DATABASE_URI, DEBUG
 from settings import XML, JSON, RESOURCE_METHODS, PUBLIC_METHODS
 from settings import PUBLIC_ITEM_METHODS, HATEOAS, IF_MATCH, ID_FIELD, ITEM_LOOKUP_FIELD
 from settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME
-from settings import ZENODO_ACCESS_TOKEN, MY_HOST
+from settings import ZENODO_ACCESS_TOKEN, EMBEDDING, EMBEDDABLE, PAGINATION
 
 from boto3.session import Session
 import requests as httprequest
@@ -24,7 +24,7 @@ class TokenAuth(BasicAuth):
 		""" 
 			Token based authentications 
 		"""		
-		try:
+                try:
 			user = recastdb.models.User.query.filter(
 				recastdb.models.User.orcid_id == orcid_id).one()
 			access_token = recastdb.models.AccessToken.query.filter(
@@ -48,7 +48,10 @@ SETTINGS = {
 	'IF_MATCH': IF_MATCH,
 	'ID_FIELD': ID_FIELD,
 	'ITEM_LOOKUP_FIELD': ITEM_LOOKUP_FIELD,
-	'SQLALCHEMY_TRACK_MODIFICATIONS': True
+	'SQLALCHEMY_TRACK_MODIFICATIONS': True,
+        'EMBEDDING': True,
+        'PAGINATION': PAGINATION
+        
 }
 
 def pre_request_archives_post_callback(request, lookup=None):
@@ -60,10 +63,10 @@ def pre_request_archives_post_callback(request, lookup=None):
 	if zip_file:
 		tag = 'request'
 		metadata = {'tag': tag, 
-					'username': orcid_id,
-					'originalname': zip_file.filename,
-					'filename': request.form['file_name']
-					}
+			    'username': orcid_id,
+			    'originalname': zip_file.filename,
+			    'filename': request.form['file_name']
+		}
 		upload_AWS(zip_file, request.form['file_name'], metadata)
 
 def pre_response_archives_post_callback(request, lookup=None):
@@ -77,10 +80,10 @@ def pre_response_archives_post_callback(request, lookup=None):
 	if zip_file:		
 		tag = 'response'
 		metadata = {'tag': tag,
-					'originalname': zip_file.filename,
-					'username': orcid_id,
-					'filename': request.form['file_name']
-				}
+			    'originalname': zip_file.filename,
+			    'username': orcid_id,
+			    'filename': request.form['file_name']
+		}
 		upload_AWS(zip_file, request.form['file_name'], metadata=metadata)
 		
 def upload_AWS(zip_file, file_uuid, metadata=None):
@@ -100,17 +103,12 @@ def download_AWS(file_name, original_file_name, download_path=None):
 	out_file = download_path or original_file_name
 	s3.Bucket(AWS_S3_BUCKET_NAME).download_file(file_name, out_file)
 
-def create_deposition(requester_id, request_uuid, description):
+def create_deposition(requester_id, request_uuid, description, username):
 	url = 'https://zenodo.org/api/api/depositions/?access_token={}'.format(
 		ZENODO_ACCESS_TOKEN)
-	username = None
-	orcid_id = None
-	user_url = '{}/{}'.format(MY_HOST, requester_id)
-	response = httprequest.get(url)
-	if response.ok:
-		username = response['name']
-		orcid_id = response['orcid_id']
-		
+        # orcid_id = username (we reverse search on orcid.org to get full name)
+	orcid_id = username
+	
 	description = 'Recast_request: {} Requester: {} ORCID: {} Request_description: {}'.format(
 		request_uuid, username, orcid_id, description)
 	headers = {"Content-Type": "application/json"}
@@ -122,7 +120,7 @@ def create_deposition(requester_id, request_uuid, description):
 			"description": description,
 			"title": "Sample title"
 			}
-					   }
+                           }
 	response = httprequest.post(url, data=json.dumps(deposition_data), headers=headers)
 	return response.json()['id']
 
@@ -138,10 +136,12 @@ def before_insert_request(request, lookup=None):
 	   Function called before inserting request to DB
 		 use it to create a Zenodo deposition and update the json
 	'''
+        username = request.__dict__['authorization']['username']
 	deposition_id = create_deposition(request['requester_id'], 
-									  request['uuid'],
-									  request['reason_for_request']
-									  )
+					  request['uuid'],
+					  request['reason_for_request'],
+                                          username)
+        
 	request['zenodo_deposition_id'] = deposition_id
 	
 def before_insert_archives(request_data, lookup=None):
@@ -149,10 +149,12 @@ def before_insert_archives(request_data, lookup=None):
 		#delete the recast_file filestorage object(not entered in db)
 		for request in request_data:
 			if request.has_key('deposition_id'):
-				request['zenodo_file_id'] = upload_zenodo(deposition_id=request['deposition_id'],
-														  file_uuid=request['file_name'], 
-														  zip_file=request['file']
-														  )
+				request['zenodo_file_id'] = upload_zenodo(
+                                        deposition_id=request['deposition_id'],
+                                        file_uuid=request['file_name'],
+                                        zip_file=request['file']
+                                )
+                                
 				del request['deposition_id']
 			del request['file']
 	except Exception, e:
