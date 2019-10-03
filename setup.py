@@ -10,7 +10,7 @@ setup(
     include_package_data = True,
     install_requires = [
         'Flask==0.10.1',
-        'werkzeug==0.10.4',
+        'werkzeug==0.15.3',
         'Eve==0.5.3',
         'eve-sqlalchemy',
         'celery',
