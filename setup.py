@@ -9,7 +9,7 @@ setup(
     packages = find_packages(),
     include_package_data = True,
     install_requires = [
-        'Flask==0.10.1',
+        'Flask==1.0',
         'werkzeug==0.10.4',
         'Eve==0.5.3',
         'eve-sqlalchemy',
