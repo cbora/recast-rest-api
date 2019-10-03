@@ -31,4 +31,4 @@ simplegeneric==0.8.1
 simplejson==3.8.1
 SQLAlchemy==1.0.11
 traitlets==4.1.0
-Werkzeug==0.10.4
+Werkzeug==0.15.3
