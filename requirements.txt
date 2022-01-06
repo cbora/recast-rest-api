@@ -1,7 +1,7 @@
 amqp==1.4.9
 anyjson==0.3.3
 billiard==3.3.0.22
-celery==3.1.20
+celery==5.2.2
 Cerberus==0.8.1
 click==6.2
 decorator==4.0.9
